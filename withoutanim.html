@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eléwénjewé: The Digital Scoop</title>
+    <link rel="stylesheet" href="styleforwithoutanim.css">
+</head>
+
+<body>
+
+    <!-- Setup Modal -->
+    <div id="setup-modal" class="modal-overlay visible"> <!-- Start visible -->
+        <div class="modal-content setup-content">
+            <h2>Game Setup</h2>
+
+            <form id="setup-form">
+                <div class="setup-section">
+                    <label for="num-players">Number of Players:</label>
+                    <select id="num-players" name="num-players">
+                        <option value="2" selected>2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <!-- Add 5/6 later if needed -->
+                    </select>
+                </div>
+
+                <div id="player-config-area">
+                    <!-- Player type selectors will be added here by JS -->
+                </div>
+
+                <div class="setup-section">
+                    <h3>Rules</h3>
+                    <label for="game-mode">Game Mode:</label>
+                    <select id="game-mode" name="game-mode">
+                        <option value="Amateur">Amateur (with Jokers)</option>
+                        <option value="Professional" selected>Professional (no Jokers)</option>
+                    </select>
+
+                    <label for="ruleset">Ruleset:</label>
+                    <select id="ruleset" name="ruleset">
+                        <option value="Normal">Normal</option>
+                        <option value="Yorùbá" selected>Yorùbá</option>
+                    </select>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="allow-esun" name="allow-esun" checked>
+                        <label for="allow-esun">Allow Esun (Building)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="allow-isiwo" name="allow-isiwo" checked>
+                        <label for="allow-isiwo">Allow Isiwo (View Pile)</label>
+                    </div>
+                </div>
+
+                <div class="setup-section">
+                    <h3>Game Length</h3>
+                    <label for="game-length">Rounds:</label>
+                    <input type="number" id="game-length" name="game-length" value="1" min="1" max="10">
+                    <!-- Add Elimination mode later if needed -->
+                </div>
+
+                <button type="submit" id="start-game-btn">Start Game</button>
+            </form>
+            <p class="credits-setup">Game by Dammie Optimus Solutions & AI, based on rules via Adewale Kassim.</p>
+        </div>
+    </div>
+
+
+    <!-- Main Game Container (Initially hidden) -->
+    <div id="game-container" style="display: none;">
+        <header>
+            <h1>Eléwénjewé</h1>
+            <div class="game-info">
+                <span id="current-player">Turn: -</span> |
+                <span id="round-info">Round: -/-</span> |
+                <span id="deck-count">Deck: -</span>
+            </div>
+        </header>
+
+        <main class="game-board">
+            <!-- Player/Opponent areas are dynamically generated -->
+            <div id="opponent-area-container">
+                <!-- Opponent areas generated here -->
+            </div>
+
+            <div class="table-area">
+                <div class="table-palette" id="table-palette">
+                    <!-- Cards and Esun piles appear here -->
+                </div>
+            </div>
+
+            <div id="player-area-container">
+                <!-- Player 1 area generated here -->
+            </div>
+
+            <aside class="game-controls">
+                <!-- Controls -->
+                <h2>Actions</h2>
+                <button id="play-card-btn" disabled>Play Selected Card</button>
+                <div class="scoop-actions" id="scoop-actions-div" style="display: none;">
+                    <button id="confirm-scoop-btn" disabled>Confirm Scoop/Capture</button>
+                    <button id="skip-scoop-btn" disabled>Play without Scooping</button>
+                </div>
+                <button id="build-esun-btn" style="display: none;" disabled>Build Pile (Esun)</button>
+                <div class="esun-build-actions" id="esun-build-actions-div" style="display: none;">
+                    <button id="confirm-esun-build-btn" disabled>Confirm Build</button>
+                    <button id="cancel-esun-build-btn">Cancel Build</button>
+                </div>
+                <h2>Game Log</h2>
+                <div id="game-log">Welcome! Configure your game.<br></div>
+            </aside>
+        </main>
+
+        <footer>
+            <p>Game by Dammie Optimus Solutions & AI, based on rules via Adewale Kassim.</p>
+        </footer>
+    </div> <!-- End of game-container -->
+
+
+    <!-- Isíwò Modal -->
+    <div id="isiwo-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="modal-close-btn" id="isiwo-close-btn">×</span>
+            <h2>Your Scooped Pile (Isíwò)</h2>
+            <div id="isiwo-cards-display" class="modal-cards"></div>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="game-over-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Game Over!</h2>
+            <div id="final-scores">
+                <!-- Final scores table populated here -->
+            </div>
+            <p id="winner-announcement"></p>
+            <button id="play-again-btn">Play Again?</button>
+        </div>
+    </div>
+
+
+    <script src="scriptforwithoutanim.js"></script>
+</body>
+
+</html>
