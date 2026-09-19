@@ -1,0 +1,1928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Eléwénjewé: Modern QBASIC Card Duel (Dammy 2005)</title>
+  
+  <style>
+    /* ==========================================================================
+       1. GLOBAL RESET & DYNAMIC VIEWPORT ARCHITECTURE
+       ========================================================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    :root {
+      --bg-midnight: #07090e;
+      --bg-surface: rgba(18, 24, 38, 0.75);
+      --bg-surface-border: rgba(255, 255, 255, 0.08);
+      --accent-gold: #f59e0b;
+      --accent-gold-glow: rgba(245, 158, 11, 0.4);
+      --accent-cyan: #06b6d4;
+      --accent-crimson: #ef4444;
+      --accent-emerald: #10b981;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --card-aspect-ratio: 2.5 / 3.5;
+      --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh; /* Dynamic Viewport Height prevents mobile address bar shifts */
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 50%, #111827 0%, var(--bg-midnight) 100%);
+      font-family: var(--font-stack);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Ambient animated table glow */
+    body::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 50%, rgba(6, 182, 212, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ==========================================================================
+       2. TOP BAR & ADVANCED VERIFICATION HUD
+       ========================================================================== */
+    .top-hud {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      background: var(--bg-surface);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--bg-surface-border);
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand h1 {
+      font-size: clamp(0.95rem, 1.8vw, 1.25rem);
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      background: linear-gradient(135deg, #fff, var(--text-muted));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand span {
+      font-size: 0.65rem;
+      color: var(--accent-gold);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .status-pill {
+      flex: 1;
+      min-width: 200px;
+      max-width: 440px;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: clamp(0.72rem, 1.2vw, 0.85rem);
+      font-weight: 600;
+      color: #e2e8f0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+      transition: all 0.3s ease;
+    }
+
+    .status-pill.highlight {
+      border-color: var(--accent-gold);
+      box-shadow: 0 0 16px var(--accent-gold-glow);
+      color: var(--accent-gold);
+    }
+
+    .controls-cluster {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--bg-surface-border);
+      color: var(--text-main);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      border-color: #f59e0b;
+      color: #000;
+      font-weight: 700;
+    }
+
+    .btn-gold:hover {
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      box-shadow: 0 0 12px var(--accent-gold-glow);
+    }
+
+    .btn-pause.paused {
+      background: var(--accent-crimson);
+      border-color: var(--accent-crimson);
+      color: #fff;
+    }
+
+    /* Speed Control Container (Buttons + Slider) */
+    .speed-panel {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 3px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--bg-surface-border);
+    }
+
+    .speed-btn-group {
+      display: flex;
+      gap: 2px;
+    }
+
+    .speed-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      padding: 3px 6px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: all 0.2s;
+    }
+
+    .speed-btn.active {
+      background: rgba(255, 255, 255, 0.18);
+      color: var(--accent-gold);
+    }
+
+    /* Continuous Slider */
+    .slider-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-left: 4px;
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .slider-wrapper input[type="range"] {
+      width: 70px;
+      height: 4px;
+      appearance: none;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .slider-wrapper input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent-gold);
+      cursor: pointer;
+      box-shadow: 0 0 6px var(--accent-gold);
+    }
+
+    .speed-readout {
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+      min-width: 38px;
+    }
+
+    /* ==========================================================================
+       3. RESPONSIVE GAME ARENA (100% REAL ESTATE UTILIZATION)
+       ========================================================================== */
+    .arena {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      padding: 10px 14px;
+      gap: 10px;
+      box-sizing: border-box;
+    }
+
+    /* Landscape Mode: Computer Left, Center Duel Table, Dammy Right */
+    @media (orientation: landscape) {
+      .arena {
+        grid-template-columns: 1fr 2.3fr 1fr;
+        grid-template-rows: 1fr;
+        align-items: center;
+      }
+    }
+
+    /* Portrait Mode: Computer Top, Center Duel Table, Dammy Bottom */
+    @media (orientation: portrait) {
+      .arena {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr 2.4fr 1fr;
+      }
+    }
+
+    /* ==========================================================================
+       4. PLAYER PODS (Dammy & Computer)
+       ========================================================================== */
+    .player-pod {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: var(--bg-surface);
+      border: 1px solid var(--bg-surface-border);
+      border-radius: 16px;
+      padding: 12px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .player-pod.active-turn {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.25);
+    }
+
+    .player-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .player-title {
+      font-size: clamp(0.85rem, 1.2vw, 1.05rem);
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .turn-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: background 0.3s;
+    }
+
+    .active-turn .turn-indicator {
+      background: var(--accent-cyan);
+      box-shadow: 0 0 8px var(--accent-cyan);
+    }
+
+    /* Deck visual representation */
+    .deck-stack-wrapper {
+      position: relative;
+      width: clamp(65px, 10vw, 95px);
+      aspect-ratio: var(--card-aspect-ratio);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-deck-stack {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.5),
+                  0 8px 12px rgba(0,0,0,0.4),
+                  -3px 3px 0 rgba(255,255,255,0.06),
+                  -6px 6px 0 rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .card-deck-stack:hover {
+      transform: translateY(-2px);
+    }
+
+    .card-deck-stack::before {
+      content: '';
+      position: absolute;
+      inset: 4px;
+      border: 1px dashed rgba(245, 158, 11, 0.3);
+      border-radius: 6px;
+    }
+
+    .deck-count-badge {
+      font-size: clamp(1.1rem, 1.8vw, 1.5rem);
+      font-weight: 900;
+      color: var(--accent-gold);
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+      z-index: 1;
+    }
+
+    .deck-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      z-index: 1;
+    }
+
+    .stats-badges {
+      display: flex;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .stat-badge {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 4px 6px;
+      text-align: center;
+    }
+
+    .stat-badge .stat-val {
+      font-size: clamp(0.8rem, 1.1vw, 1rem);
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .stat-badge .stat-lbl {
+      font-size: 0.62rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    /* Action button for human play mode */
+    .play-trigger-btn {
+      width: 100%;
+      padding: 8px;
+      background: linear-gradient(135deg, var(--accent-cyan), #0284c7);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.8rem;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(6, 182, 212, 0.3);
+      transition: all 0.2s ease;
+      display: none;
+    }
+
+    .play-trigger-btn:hover {
+      background: linear-gradient(135deg, #22d3ee, #0ea5e9);
+      box-shadow: 0 6px 20px rgba(6, 182, 212, 0.5);
+      transform: translateY(-1px);
+    }
+
+    .play-trigger-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    /* ==========================================================================
+       5. CENTER DUELING ARENA & LOGIC INSPECTOR HUD
+       ========================================================================== */
+    .center-table {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      background: radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.8) 0%, rgba(7, 10, 16, 0.95) 100%);
+      border: 1px solid rgba(245, 158, 11, 0.15);
+      border-radius: 20px;
+      padding: 12px;
+      box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8),
+                  0 12px 36px rgba(0, 0, 0, 0.6);
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* Glowing Match Alert Ring */
+    .match-glow-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      border: 4px solid var(--accent-gold);
+      box-shadow: inset 0 0 30px var(--accent-gold), 0 0 40px var(--accent-gold);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 5;
+    }
+
+    .match-glow-ring.active {
+      opacity: 1;
+      animation: pulseMatchRing 0.8s infinite alternate ease-in-out;
+    }
+
+    @keyframes pulseMatchRing {
+      0% { box-shadow: inset 0 0 20px var(--accent-gold), 0 0 25px var(--accent-gold); }
+      100% { box-shadow: inset 0 0 50px var(--accent-gold), 0 0 60px var(--accent-gold); }
+    }
+
+    /* Center Cards Row */
+    .cards-duel-zone {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(12px, 3vw, 36px);
+      width: 100%;
+      flex: 1;
+      max-height: 72%;
+    }
+
+    .card-slot-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      height: 100%;
+    }
+
+    .slot-label {
+      font-size: clamp(0.68rem, 0.9vw, 0.8rem);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .slot-label .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .prev-dot { background: var(--text-muted); }
+    .new-dot { background: var(--accent-gold); box-shadow: 0 0 6px var(--accent-gold); }
+
+    /* The Playing Card Element: Dynamically scales to largest possible size */
+    .playing-card {
+      position: relative;
+      height: clamp(140px, 34vh, 290px);
+      aspect-ratio: var(--card-aspect-ratio);
+      border-radius: 12px;
+      background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7),
+                  0 2px 6px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+      color: #0f172a;
+    }
+
+    .playing-card.empty-placeholder {
+      background: rgba(255, 255, 255, 0.02);
+      border: 2px dashed rgba(255, 255, 255, 0.1);
+      box-shadow: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .empty-text {
+      color: rgba(255, 255, 255, 0.2);
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Suits Styling */
+    .playing-card.suit-hearts,
+    .playing-card.suit-diamonds {
+      color: var(--accent-crimson);
+    }
+
+    .playing-card.suit-spades,
+    .playing-card.suit-clubs {
+      color: #090d16;
+    }
+
+    .card-corner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      line-height: 1;
+    }
+
+    .card-corner.bottom {
+      transform: rotate(180deg);
+    }
+
+    .card-rank {
+      font-size: clamp(1rem, 2vh, 1.6rem);
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+
+    .card-mini-suit {
+      font-size: clamp(0.85rem, 1.6vh, 1.3rem);
+    }
+
+    .card-center-art {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(2.5rem, 6vh, 4.8rem);
+      pointer-events: none;
+      opacity: 0.95;
+    }
+
+    /* Card Play Entrance Animation */
+    .card-animated-drop {
+      animation: cardDropIn 0.35s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+
+    @keyframes cardDropIn {
+      0% {
+        transform: translateY(-30px) scale(0.85) rotate(-6deg);
+        opacity: 0;
+      }
+      100% {
+        transform: translateY(0) scale(1) rotate(0deg);
+        opacity: 1;
+      }
+    }
+
+    /* Center Pot & Real-time Logic Inspector Box */
+    .table-center-bottom {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      z-index: 4;
+    }
+
+    .pot-meta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid var(--bg-surface-border);
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .pot-meta-pill .pot-highlight {
+      color: var(--accent-gold);
+      font-weight: 900;
+      font-size: 0.85rem;
+    }
+
+    /* LIVE LOGIC & CALCULATION INSPECTOR HUD */
+    .logic-inspector-bar {
+      width: 100%;
+      max-width: 620px;
+      background: rgba(0, 0, 0, 0.65);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-family: monospace;
+      font-size: clamp(0.68rem, 1vw, 0.78rem);
+      color: #93c5fd;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .logic-inspector-bar .inspector-tag {
+      background: rgba(245, 158, 11, 0.2);
+      color: var(--accent-gold);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+
+    .logic-inspector-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+
+    /* Big "MATCH!" and "TRIAL" Banner Overlays */
+    .banner-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.6);
+      background: rgba(15, 23, 42, 0.95);
+      border: 2px solid var(--accent-gold);
+      box-shadow: 0 0 40px var(--accent-gold-glow);
+      padding: 16px 32px;
+      border-radius: 16px;
+      text-align: center;
+      z-index: 20;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .banner-overlay.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .banner-overlay h2 {
+      font-size: clamp(1.4rem, 3.5vw, 2.3rem);
+      font-weight: 900;
+      color: var(--accent-gold);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      text-shadow: 0 2px 10px var(--accent-gold-glow);
+    }
+
+    .banner-overlay p {
+      font-size: clamp(0.75rem, 1.2vw, 0.92rem);
+      color: var(--text-main);
+      margin-top: 4px;
+      font-weight: 600;
+    }
+
+    /* ==========================================================================
+       6. BOTTOM FOOTER & AUDIT LOG
+       ========================================================================== */
+    .bottom-hud {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 16px;
+      background: var(--bg-surface);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-top: 1px solid var(--bg-surface-border);
+      gap: 10px;
+      font-size: 0.72rem;
+    }
+
+    .lead-meter {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+    }
+
+    .lead-chip {
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-muted);
+    }
+
+    .lead-chip.dammy-leading {
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    .lead-chip.comp-leading {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--accent-crimson);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .log-ticker {
+      flex: 1;
+      text-align: center;
+      color: var(--text-muted);
+      font-family: monospace;
+      font-size: 0.72rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .time-tracker {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* ==========================================================================
+       7. VICTORY / GAME OVER MODAL DIALOG
+       ========================================================================== */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+      padding: 20px;
+    }
+
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: linear-gradient(145deg, #111827, #070a10);
+      border: 1px solid var(--accent-gold);
+      box-shadow: 0 0 50px var(--accent-gold-glow),
+                  0 20px 40px rgba(0, 0, 0, 0.8);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 440px;
+      padding: 26px;
+      text-align: center;
+      transform: scale(0.9);
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .modal-backdrop.open .modal-card {
+      transform: scale(1);
+    }
+
+    .modal-card h3 {
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: var(--accent-gold);
+      letter-spacing: 1px;
+    }
+
+    .modal-card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin: 10px 0 18px 0;
+      line-height: 1.5;
+    }
+
+    .modal-stats {
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 12px;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .modal-stats .st-item span {
+      display: block;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .modal-stats .st-item strong {
+      font-size: 0.95rem;
+      color: var(--text-main);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation & Control HUD -->
+  <header class="top-hud">
+    <div class="brand">
+      <h1>Eléwénjewé</h1>
+      <span>Dammy 2005 • Legacy Remaster</span>
+    </div>
+
+    <div id="game-status-pill" class="status-pill">
+      Initializing 52-card deck...
+    </div>
+
+    <div class="controls-cluster">
+      <!-- Advanced Speed Control Panel -->
+      <div class="speed-panel">
+        <div class="speed-btn-group" title="Quick Speed Presets">
+          <button class="speed-btn" data-speed="0.1" title="Ultra Slow (True QBASIC Speed)">0.1x</button>
+          <button class="speed-btn" data-speed="0.25" title="Slow Motion">0.25x</button>
+          <button class="speed-btn" data-speed="0.5">0.5x</button>
+          <button class="speed-btn active" data-speed="1.0">1x</button>
+          <button class="speed-btn" data-speed="2.5">2.5x</button>
+          <button class="speed-btn" data-speed="5.0">5x</button>
+        </div>
+
+        <!-- Continuous Granular Slider -->
+        <div class="slider-wrapper" title="Drag to adjust exact speed (0.05x to 5.0x)">
+          <input type="range" id="speed-slider" min="0.05" max="5.0" step="0.05" value="1.0" />
+          <span id="speed-readout" class="speed-readout">1.00x</span>
+        </div>
+      </div>
+
+      <!-- Pause / Resume Button -->
+      <button id="pause-btn" class="btn btn-pause" title="Pause / Resume simulation">
+        <svg id="pause-icon" width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        <span id="pause-btn-text">Pause</span>
+      </button>
+
+      <!-- Step Frame-by-Frame Button -->
+      <button id="step-btn" class="btn" title="Step exactly 1 turn forward">
+        <svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+        <span>Step ❯|</span>
+      </button>
+
+      <!-- Mode Toggle (Spectate vs Play) -->
+      <button id="mode-toggle-btn" class="btn" title="Toggle Auto-Simulation or Manual Play">
+        <svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        <span>Auto</span>
+      </button>
+
+      <!-- Audio Mute/Unmute -->
+      <button id="sound-btn" class="btn" title="Audio Effects">
+        <svg id="sound-icon" width="13" height="13" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+        </svg>
+      </button>
+
+      <!-- Restart Game Button -->
+      <button id="restart-btn" class="btn btn-gold" title="Shuffle & Re-deal">
+        Restart
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Dual Arena (Scales Dynamically) -->
+  <main class="arena">
+
+    <!-- COMPUTER POD -->
+    <section id="pod-computer" class="player-pod">
+      <div class="player-header">
+        <div class="player-title">
+          <div class="turn-indicator"></div>
+          <span>COMPUTER</span>
+        </div>
+        <span id="comp-status-tag" style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700;">BOT</span>
+      </div>
+
+      <div class="deck-stack-wrapper">
+        <div class="card-deck-stack">
+          <span id="comp-hand-count" class="deck-count-badge">26</span>
+          <span class="deck-label">Cards</span>
+        </div>
+      </div>
+
+      <div class="stats-badges">
+        <div class="stat-badge">
+          <div id="comp-reserve-count" class="stat-val">0</div>
+          <div class="stat-lbl">Reserve</div>
+        </div>
+        <div class="stat-badge">
+          <div id="comp-total-cards" class="stat-val">26</div>
+          <div class="stat-lbl">Total</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CENTER DUELING TABLE -->
+    <section class="center-table">
+      <div id="match-ring" class="match-glow-ring"></div>
+
+      <!-- Banner Notification Overlay -->
+      <div id="banner-overlay" class="banner-overlay">
+        <h2 id="banner-title">MATCH!</h2>
+        <p id="banner-desc">Suit matched! Dammy captures the pot.</p>
+      </div>
+
+      <!-- Card Display Zone -->
+      <div class="cards-duel-zone">
+        <!-- Previous Card Slot -->
+        <div class="card-slot-wrapper">
+          <div class="slot-label">
+            <span class="dot prev-dot"></span>
+            <span>Previous</span>
+          </div>
+          <div id="slot-prev-card" class="playing-card empty-placeholder">
+            <span class="empty-text">Empty</span>
+          </div>
+        </div>
+
+        <!-- Current / New Card Slot -->
+        <div class="card-slot-wrapper">
+          <div class="slot-label">
+            <span class="dot new-dot"></span>
+            <span>Current</span>
+          </div>
+          <div id="slot-current-card" class="playing-card empty-placeholder">
+            <span class="empty-text">Empty</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Table Bottom (Pot Counter + Calculation Inspector) -->
+      <div class="table-center-bottom">
+        <div class="pot-meta-pill">
+          <span>POT CACHE:</span>
+          <span id="pot-count-display" class="pot-highlight">0</span>
+          <span style="color: var(--text-muted);">cards in center</span>
+        </div>
+
+        <!-- Real-Time Logic & Calculation Inspector HUD -->
+        <div class="logic-inspector-bar" title="Real-time mathematical ledger of every move">
+          <span class="inspector-tag">LOGIC INSPECTOR</span>
+          <span id="inspector-text" class="logic-inspector-text">Deck initialized. Awaiting first move...</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- DAMMY / HUMAN PLAYER POD -->
+    <section id="pod-dammy" class="player-pod">
+      <div class="player-header">
+        <div class="player-title">
+          <div class="turn-indicator"></div>
+          <span id="dammy-title-label">DAMMY</span>
+        </div>
+        <span id="dammy-status-tag" style="font-size: 0.7rem; color: var(--accent-cyan); font-weight: 700;">READY</span>
+      </div>
+
+      <div class="deck-stack-wrapper">
+        <div id="dammy-deck-stack" class="card-deck-stack">
+          <span id="dammy-hand-count" class="deck-count-badge">26</span>
+          <span class="deck-label">Cards</span>
+        </div>
+      </div>
+
+      <div class="stats-badges">
+        <div class="stat-badge">
+          <div id="dammy-reserve-count" class="stat-val">0</div>
+          <div class="stat-lbl">Reserve</div>
+        </div>
+        <div class="stat-badge">
+          <div id="dammy-total-cards" class="stat-val">26</div>
+          <div class="stat-lbl">Total</div>
+        </div>
+      </div>
+
+      <!-- Manual Action Button (Appears when in Play Mode) -->
+      <button id="human-play-btn" class="play-trigger-btn">
+        PLAY CARD (SPACE)
+      </button>
+    </section>
+
+  </main>
+
+  <!-- Bottom HUD & Audit Bar -->
+  <footer class="bottom-hud">
+    <div class="lead-meter">
+      <span>Standing:</span>
+      <span id="lead-chip" class="lead-chip">Tied (26 - 26)</span>
+    </div>
+
+    <div id="game-audit-log" class="log-ticker">
+      Welcome to Eléwénjewé. Shuffling 52 cards...
+    </div>
+
+    <div class="time-tracker">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+      </svg>
+      <span id="game-timer">00:00</span>
+    </div>
+  </footer>
+
+  <!-- End Game Modal -->
+  <div id="gameover-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <h3 id="modal-winner-title">DAMMY WINS!</h3>
+      <p id="modal-winner-desc">Dammy captured all 52 cards leaving the opponent with nothing!</p>
+
+      <div class="modal-stats">
+        <div class="st-item">
+          <span>Match Duration</span>
+          <strong id="modal-stat-time">00:00</strong>
+        </div>
+        <div class="st-item">
+          <span>Total Turns</span>
+          <strong id="modal-stat-turns">0</strong>
+        </div>
+        <div class="st-item">
+          <span>Dammy Matches</span>
+          <strong id="modal-stat-dammy-matches">0</strong>
+        </div>
+        <div class="st-item">
+          <span>Computer Matches</span>
+          <strong id="modal-stat-comp-matches">0</strong>
+        </div>
+      </div>
+
+      <button id="modal-play-again-btn" class="btn btn-gold" style="width: 100%; justify-content: center; padding: 12px;">
+        Play Another Game
+      </button>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       8. JAVASCRIPT: SOUND SYNTHESIS & 2005 QBASIC GAME ENGINE
+       ========================================================================== */
+  -->
+  <script>
+    /* --------------------------------------------------------------------------
+       8.1 SOUND SYNTHESIZER (Web Audio API)
+       -------------------------------------------------------------------------- */
+    class RetroSoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.isMuted = false;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playCardFlip() {
+        if (this.isMuted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(280, now);
+        osc.frequency.exponentialRampToValueAtTime(70, now + 0.08);
+
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.08);
+      }
+
+      playMatchChime() {
+        if (this.isMuted) return;
+        this.init();
+        const chords = [523.25, 659.25, 783.99, 1046.50]; // C Major arpeggio
+        chords.forEach((freq, idx) => {
+          const now = this.ctx.currentTime + idx * 0.06;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now);
+
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now);
+          osc.stop(now + 0.28);
+        });
+      }
+
+      playTrialBeep(isPenaltyAlert = false) {
+        if (this.isMuted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = isPenaltyAlert ? 'sawtooth' : 'sine';
+        osc.frequency.setValueAtTime(isPenaltyAlert ? 320 : 1200, now);
+        if (isPenaltyAlert) {
+          osc.frequency.linearRampToValueAtTime(180, now + 0.25);
+        }
+
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + (isPenaltyAlert ? 0.25 : 0.09));
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + (isPenaltyAlert ? 0.25 : 0.09));
+      }
+
+      playGameOverVictory() {
+        if (this.isMuted) return;
+        this.init();
+        const notes = [440, 554.37, 659.25, 880];
+        notes.forEach((freq, idx) => {
+          const now = this.ctx.currentTime + idx * 0.12;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now);
+
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now);
+          osc.stop(now + 0.5);
+        });
+      }
+    }
+
+    /* --------------------------------------------------------------------------
+       8.2 GAME CONSTANTS & SUIT METADATA
+       -------------------------------------------------------------------------- */
+    const SUITS = [
+      { id: 'S', name: 'spades', symbol: '♠', isRed: false, label: 'Spades' },
+      { id: 'H', name: 'hearts', symbol: '♥', isRed: true, label: 'Hearts' },
+      { id: 'D', name: 'diamonds', symbol: '♦', isRed: true, label: 'Diamonds' },
+      { id: 'C', name: 'clubs', symbol: '♣', isRed: false, label: 'Clubs' }
+    ];
+
+    const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+    /* --------------------------------------------------------------------------
+       8.3 ELÉWÉNJIEWÉ GAME CONTROLLER
+       -------------------------------------------------------------------------- */
+    class ElewonjewoGame {
+      constructor() {
+        this.sound = new RetroSoundEngine();
+
+        // Game state variables
+        this.dammyHand = [];
+        this.dammyReserve = [];
+        this.compHand = [];
+        this.compReserve = [];
+        this.cache = []; // The center pot
+
+        this.currentTurn = null; // 'DAMMY' | 'COMP'
+        this.isAutoMode = true;
+        this.speedFactor = 1.0;
+        this.isPaused = false;
+        this.stepRequested = false;
+        this.isProcessingStep = false;
+        this.isGameOver = false;
+
+        // Stats tracking
+        this.startTime = null;
+        this.timerInterval = null;
+        this.turnCount = 0;
+        this.dammyMatchCount = 0;
+        this.compMatchCount = 0;
+
+        // Cache DOM elements
+        this.dom = {
+          statusPill: document.getElementById('game-status-pill'),
+          auditLog: document.getElementById('game-audit-log'),
+          inspectorText: document.getElementById('inspector-text'),
+          leadChip: document.getElementById('lead-chip'),
+          timer: document.getElementById('game-timer'),
+          potCount: document.getElementById('pot-count-display'),
+          matchRing: document.getElementById('match-ring'),
+          banner: document.getElementById('banner-overlay'),
+          bannerTitle: document.getElementById('banner-title'),
+          bannerDesc: document.getElementById('banner-desc'),
+          prevCardSlot: document.getElementById('slot-prev-card'),
+          currentCardSlot: document.getElementById('slot-current-card'),
+          podDammy: document.getElementById('pod-dammy'),
+          podComp: document.getElementById('pod-computer'),
+          dammyHandCount: document.getElementById('dammy-hand-count'),
+          dammyReserveCount: document.getElementById('dammy-reserve-count'),
+          dammyTotalCount: document.getElementById('dammy-total-cards'),
+          compHandCount: document.getElementById('comp-hand-count'),
+          compReserveCount: document.getElementById('comp-reserve-count'),
+          compTotalCount: document.getElementById('comp-total-cards'),
+          humanPlayBtn: document.getElementById('human-play-btn'),
+          modeToggleBtn: document.getElementById('mode-toggle-btn'),
+          soundBtn: document.getElementById('sound-btn'),
+          restartBtn: document.getElementById('restart-btn'),
+          pauseBtn: document.getElementById('pause-btn'),
+          pauseBtnText: document.getElementById('pause-btn-text'),
+          pauseIcon: document.getElementById('pause-icon'),
+          stepBtn: document.getElementById('step-btn'),
+          speedBtns: document.querySelectorAll('.speed-btn'),
+          speedSlider: document.getElementById('speed-slider'),
+          speedReadout: document.getElementById('speed-readout'),
+          // Modal
+          modal: document.getElementById('gameover-modal'),
+          modalTitle: document.getElementById('modal-winner-title'),
+          modalDesc: document.getElementById('modal-winner-desc'),
+          modalTime: document.getElementById('modal-stat-time'),
+          modalTurns: document.getElementById('modal-stat-turns'),
+          modalDammyMatches: document.getElementById('modal-stat-dammy-matches'),
+          modalCompMatches: document.getElementById('modal-stat-comp-matches'),
+          modalPlayAgainBtn: document.getElementById('modal-play-again-btn')
+        };
+
+        this.bindEvents();
+        this.startNewGame();
+      }
+
+      bindEvents() {
+        // Mode toggle (Auto-simulate vs Manual Play)
+        this.dom.modeToggleBtn.addEventListener('click', () => {
+          this.isAutoMode = !this.isAutoMode;
+          this.dom.modeToggleBtn.querySelector('span').textContent = this.isAutoMode ? 'Auto' : 'Play';
+          this.dom.humanPlayBtn.style.display = this.isAutoMode ? 'none' : 'block';
+          this.updateHumanButtonState();
+          this.log(`Switched to ${this.isAutoMode ? 'Auto-Simulation' : 'Interactive Play'} mode.`);
+          if (this.isAutoMode && !this.isProcessingStep && !this.isGameOver && !this.isPaused) {
+            this.runStep();
+          }
+        });
+
+        // Speed Preset Buttons
+        this.dom.speedBtns.forEach(btn => {
+          btn.addEventListener('click', () => {
+            const val = parseFloat(btn.getAttribute('data-speed'));
+            this.setSpeed(val);
+          });
+        });
+
+        // Continuous Speed Slider
+        this.dom.speedSlider.addEventListener('input', (e) => {
+          const val = parseFloat(e.target.value);
+          this.setSpeed(val, false);
+        });
+
+        // Pause / Resume Button
+        this.dom.pauseBtn.addEventListener('click', () => {
+          this.togglePause();
+        });
+
+        // Step Next Button (Frame-by-frame)
+        this.dom.stepBtn.addEventListener('click', () => {
+          if (this.isGameOver) return;
+          if (!this.isPaused) {
+            this.togglePause(true); // Automatically pause if running
+          }
+          this.stepRequested = true;
+          if (!this.isProcessingStep) {
+            this.runStep();
+          }
+        });
+
+        // Sound toggle
+        this.dom.soundBtn.addEventListener('click', () => {
+          this.sound.isMuted = !this.sound.isMuted;
+          this.dom.soundBtn.style.opacity = this.sound.isMuted ? '0.4' : '1';
+          this.log(this.sound.isMuted ? 'Sound muted.' : 'Sound unmuted.');
+        });
+
+        // Restart button
+        this.dom.restartBtn.addEventListener('click', () => this.startNewGame());
+        this.dom.modalPlayAgainBtn.addEventListener('click', () => {
+          this.dom.modal.classList.remove('open');
+          this.startNewGame();
+        });
+
+        // Manual Play Card Button & Spacebar support
+        this.dom.humanPlayBtn.addEventListener('click', () => {
+          if (!this.isAutoMode && this.currentTurn === 'DAMMY' && !this.isProcessingStep && !this.isGameOver) {
+            this.executePlayerTurn('DAMMY');
+          }
+        });
+
+        window.addEventListener('keydown', (e) => {
+          if (e.code === 'Space' && !this.isAutoMode && this.currentTurn === 'DAMMY' && !this.isProcessingStep && !this.isGameOver) {
+            e.preventDefault();
+            this.executePlayerTurn('DAMMY');
+          }
+        });
+      }
+
+      setSpeed(value, updateSlider = true) {
+        this.speedFactor = value;
+        this.dom.speedReadout.textContent = `${value.toFixed(2)}x`;
+        if (updateSlider) {
+          this.dom.speedSlider.value = value;
+        }
+
+        // Highlight preset if matching
+        this.dom.speedBtns.forEach(b => {
+          const bVal = parseFloat(b.getAttribute('data-speed'));
+          if (Math.abs(bVal - value) < 0.01) {
+            b.classList.add('active');
+          } else {
+            b.classList.remove('active');
+          }
+        });
+
+        this.inspect(`Speed updated to ${value.toFixed(2)}x (Pacing adjusted)`);
+      }
+
+      togglePause(forcePause = null) {
+        if (forcePause !== null) {
+          this.isPaused = forcePause;
+        } else {
+          this.isPaused = !this.isPaused;
+        }
+
+        if (this.isPaused) {
+          this.dom.pauseBtn.classList.add('paused');
+          this.dom.pauseBtnText.textContent = 'Resume';
+          this.dom.pauseIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+          this.inspect('GAME PAUSED. Click "Step ❯|" to advance exactly one turn.');
+          this.setStatus('Simulation paused', true);
+        } else {
+          this.dom.pauseBtn.classList.remove('paused');
+          this.dom.pauseBtnText.textContent = 'Pause';
+          this.dom.pauseIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+          this.inspect('Simulation resumed.');
+          this.setStatus('Simulation active');
+          if (!this.isProcessingStep && !this.isGameOver) {
+            this.runStep();
+          }
+        }
+      }
+
+      // Variable sleep that respects pause and slow-motion
+      async sleep(ms) {
+        const adjustedMs = ms / this.speedFactor;
+        const startTime = Date.now();
+
+        while (Date.now() - startTime < adjustedMs) {
+          // If paused, wait here until unpaused or a single step is requested
+          if (this.isPaused && !this.stepRequested) {
+            await new Promise(res => setTimeout(res, 50));
+          } else {
+            await new Promise(res => setTimeout(res, 20));
+          }
+        }
+      }
+
+      /* --------------------------------------------------------------------------
+         8.4 DECK INITIALIZATION & SHUFFLE (Dammy 2005)
+         -------------------------------------------------------------------------- */
+      startNewGame() {
+        this.isGameOver = false;
+        this.isProcessingStep = false;
+        this.stepRequested = false;
+        this.turnCount = 0;
+        this.dammyMatchCount = 0;
+        this.compMatchCount = 0;
+        this.cache = [];
+        this.dammyReserve = [];
+        this.compReserve = [];
+
+        if (this.isPaused) {
+          this.togglePause(false);
+        }
+
+        // Stop previous timer
+        if (this.timerInterval) clearInterval(this.timerInterval);
+        this.startTime = Date.now();
+        this.timerInterval = setInterval(() => this.updateTimerDisplay(), 1000);
+
+        // Hide overlays
+        this.dom.banner.classList.remove('show');
+        this.dom.matchRing.classList.remove('active');
+        this.dom.modal.classList.remove('open');
+
+        // Create standard 52-card deck
+        let fullDeck = [];
+        SUITS.forEach(suit => {
+          RANKS.forEach(rank => {
+            fullDeck.push({ rank, suit });
+          });
+        });
+
+        // Fisher-Yates shuffle algorithm (Random arrangement)
+        for (let i = fullDeck.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [fullDeck[i], fullDeck[j]] = [fullDeck[j], fullDeck[i]];
+        }
+
+        // Deal 26 cards to DAMMY, 26 cards to COMPUTER
+        this.dammyHand = fullDeck.slice(0, 26);
+        this.compHand = fullDeck.slice(26, 52);
+
+        this.renderTableCards();
+        this.updateHUD();
+
+        // Step 4 in original code: Determine who plays first (Random roll 1 to 10)
+        const roll = Math.floor(Math.random() * 10) + 1;
+        this.currentTurn = (roll % 2 === 0) ? 'DAMMY' : 'COMP';
+
+        const starterName = (this.currentTurn === 'DAMMY') ? 'DAMMY' : 'COMPUTER';
+        this.log(`Game dealt! Roll was ${roll} (${roll % 2 === 0 ? 'even' : 'odd'}). ${starterName} plays first.`);
+        this.setStatus(`${starterName} plays first`, true);
+        this.inspect(`Deal complete: DAMMY [26 cards] | COMP [26 cards]. Starter: ${starterName} (Roll: ${roll})`);
+
+        this.updatePodTurnStyles();
+
+        setTimeout(() => {
+          if (!this.isPaused && (this.isAutoMode || this.currentTurn === 'COMP')) {
+            this.runStep();
+          }
+        }, 1200 / this.speedFactor);
+      }
+
+      /* --------------------------------------------------------------------------
+         8.5 CORE GAME STEP & REPLENISHMENT
+         -------------------------------------------------------------------------- */
+      async runStep() {
+        if (this.isProcessingStep || this.isGameOver) return;
+        if (this.isPaused && !this.stepRequested) return;
+
+        this.isProcessingStep = true;
+        this.stepRequested = false; // Consume single-step request if active
+
+        // Auto-replenish decks from reserves if main hand is empty
+        this.replenishIfEmpty('DAMMY');
+        this.replenishIfEmpty('COMP');
+
+        // Check for 7-Card Penalty Trial condition (Step 8 of Dammy's design)
+        const dammyTotal = this.dammyHand.length + this.dammyReserve.length;
+        const compTotal = this.compHand.length + this.compReserve.length;
+
+        if (dammyTotal === 0 && compTotal > 0) {
+          await this.executePenaltyTrial('COMP', 'DAMMY');
+          this.isProcessingStep = false;
+          return;
+        } else if (compTotal === 0 && dammyTotal > 0) {
+          await this.executePenaltyTrial('DAMMY', 'COMP');
+          this.isProcessingStep = false;
+          return;
+        } else if (dammyTotal === 0 && compTotal === 0) {
+          this.endGame('DRAW');
+          this.isProcessingStep = false;
+          return;
+        }
+
+        // Execute turn based on active player
+        if (this.currentTurn === 'DAMMY') {
+          if (!this.isAutoMode) {
+            this.updateHumanButtonState();
+            this.isProcessingStep = false;
+            return;
+          }
+          await this.executePlayerTurn('DAMMY');
+        } else {
+          await this.executePlayerTurn('COMP');
+        }
+
+        this.isProcessingStep = false;
+
+        // Chain next step if in auto-mode or if computer's turn, unless paused
+        if (!this.isGameOver && !this.isPaused) {
+          if (this.isAutoMode || this.currentTurn === 'COMP') {
+            await this.sleep(450);
+            this.runStep();
+          }
+        }
+      }
+
+      replenishIfEmpty(player) {
+        if (player === 'DAMMY' && this.dammyHand.length === 0 && this.dammyReserve.length > 0) {
+          this.dammyHand = [...this.dammyReserve];
+          this.dammyReserve = [];
+          this.inspect(`Reserve Replenish: DAMMY transferred ${this.dammyHand.length} reserve cards to active hand.`);
+          this.log('DAMMY transferred reserve cards into active deck.');
+        } else if (player === 'COMP' && this.compHand.length === 0 && this.compReserve.length > 0) {
+          this.compHand = [...this.compReserve];
+          this.compReserve = [];
+          this.inspect(`Reserve Replenish: COMP transferred ${this.compHand.length} reserve cards to active hand.`);
+          this.log('Computer transferred reserve cards into active deck.');
+        }
+      }
+
+      /* --------------------------------------------------------------------------
+         8.6 EXECUTING TURN & SUIT MATCH (Eléwénjewé Rule)
+         -------------------------------------------------------------------------- */
+      async executePlayerTurn(player) {
+        this.turnCount++;
+        this.replenishIfEmpty(player);
+
+        const card = (player === 'DAMMY') ? this.dammyHand.shift() : this.compHand.shift();
+        if (!card) return;
+
+        this.cache.push(card);
+        this.sound.playCardFlip();
+        this.renderTableCards(true);
+        this.updateHUD();
+
+        const playerName = (player === 'DAMMY') ? 'DAMMY' : 'COMPUTER';
+        this.log(`${playerName} played ${card.rank}${card.suit.symbol}`);
+        this.setStatus(`${playerName} plays ${card.rank}${card.suit.symbol}`);
+
+        const cacheLen = this.cache.length;
+        if (cacheLen > 1) {
+          const curr = this.cache[cacheLen - 1];
+          const prev = this.cache[cacheLen - 2];
+          this.inspect(`Suit Check: Current [${curr.rank}${curr.suit.symbol} ${curr.suit.label}] vs Previous [${prev.rank}${prev.suit.symbol} ${prev.suit.label}]`);
+        } else {
+          this.inspect(`${playerName} opened the pot with ${card.rank}${card.suit.symbol}. Pot: 1 card.`);
+        }
+
+        await this.sleep(650);
+
+        // Check for Suit Match: RIGHT$(Cache$(cachedcards), 1) = RIGHT$(Cache$(cachedcards - 1), 1)
+        if (cacheLen > 1) {
+          const currentCard = this.cache[cacheLen - 1];
+          const previousCard = this.cache[cacheLen - 2];
+
+          if (currentCard.suit.id === previousCard.suit.id) {
+            await this.handleMatchVictory(player);
+            return;
+          } else {
+            this.inspect(`No Match: Suits differ (${currentCard.suit.label} ≠ ${previousCard.suit.label}). Turn passes.`);
+          }
+        }
+
+        // No match: alternate turn
+        this.currentTurn = (player === 'DAMMY') ? 'COMP' : 'DAMMY';
+        this.updatePodTurnStyles();
+        this.updateHumanButtonState();
+      }
+
+      /* --------------------------------------------------------------------------
+         8.7 SUIT MATCH CELEBRATION & POT COLLECTION
+         -------------------------------------------------------------------------- */
+      async handleMatchVictory(winner) {
+        const winnerName = (winner === 'DAMMY') ? 'DAMMY' : 'COMPUTER';
+        if (winner === 'DAMMY') this.dammyMatchCount++;
+        else this.compMatchCount++;
+
+        const suitWon = this.cache[this.cache.length - 1].suit;
+        const potSize = this.cache.length;
+
+        this.sound.playMatchChime();
+        this.dom.matchRing.classList.add('active');
+
+        this.showBanner('MATCH!', `${winnerName} matches ${suitWon.symbol} and wins ${potSize} cards!`);
+        this.setStatus(`MATCH! ${winnerName} takes ${potSize} cards!`, true);
+        this.inspect(`★ MATCH TRIGGERED! ${winnerName} matches ${suitWon.label} (${suitWon.symbol}). Transferring ${potSize} cards to ${winnerName}'s Reserve.`);
+        this.log(`★ MATCH! Suit ${suitWon.symbol} matched! ${winnerName} takes center pot (${potSize} cards).`);
+
+        await this.sleep(1300);
+
+        // Transfer all cached cards to the winner's reserve
+        if (winner === 'DAMMY') {
+          this.dammyReserve.push(...this.cache);
+        } else {
+          this.compReserve.push(...this.cache);
+        }
+        this.cache = [];
+
+        this.dom.matchRing.classList.remove('active');
+        this.dom.banner.classList.remove('show');
+        this.renderTableCards();
+        this.updateHUD();
+
+        // Rule: The winner leads and plays first next!
+        this.currentTurn = winner;
+        this.updatePodTurnStyles();
+        this.updateHumanButtonState();
+        this.inspect(`Pot cleared. ${winnerName} leads and plays first for the next round.`);
+
+        await this.sleep(500);
+      }
+
+      /* --------------------------------------------------------------------------
+         8.8 THE 7-CARD PENALTY TRIAL (Step 8 of Dammy's Original Rules)
+         -------------------------------------------------------------------------- */
+      async executePenaltyTrial(activePlayer, emptyPlayer) {
+        const activeName = (activePlayer === 'DAMMY') ? 'DAMMY' : 'COMPUTER';
+        const emptyName = (emptyPlayer === 'DAMMY') ? 'DAMMY' : 'COMPUTER';
+
+        this.sound.playTrialBeep(true);
+        this.showBanner('7-TRIAL PENALTY', `${emptyName} has 0 cards! ${activeName} plays 7 times.`);
+        this.setStatus(`Oops! No cards for ${emptyName}. ${activeName} plays 7 trials!`, true);
+        this.inspect(`7-TRIAL PENALTY: ${emptyName} is at 0 cards. ${activeName} must play up to 7 cards.`);
+        this.log(`PENALTY TRIAL: ${emptyName} has run out of cards! ${activeName} starts 7-card trial.`);
+
+        await this.sleep(1800);
+        this.dom.banner.classList.remove('show');
+
+        let trialWon = false;
+
+        for (let trial = 1; trial <= 7; trial++) {
+          this.replenishIfEmpty(activePlayer);
+          const hand = (activePlayer === 'DAMMY') ? this.dammyHand : this.compHand;
+
+          if (hand.length === 0) {
+            this.inspect(`Trial halted early: ${activeName} also ran out of cards!`);
+            break;
+          }
+
+          const card = hand.shift();
+          this.cache.push(card);
+          this.sound.playCardFlip();
+          this.renderTableCards(true);
+          this.updateHUD();
+
+          this.setStatus(`Trial ${trial}/7: ${activeName} played ${card.rank}${card.suit.symbol}`);
+          this.log(`Trial ${trial}/7: ${activeName} plays ${card.rank}${card.suit.symbol}`);
+          this.sound.playTrialBeep(false);
+
+          const cLen = this.cache.length;
+          const prev = this.cache[cLen - 2];
+          this.inspect(`Trial ${trial} of 7: ${activeName} plays ${card.rank}${card.suit.symbol} vs Previous ${prev ? prev.rank + prev.suit.symbol : 'None'}`);
+
+          await this.sleep(900);
+
+          // Check for suit match during penalty trial
+          if (cLen > 1 && this.cache[cLen - 1].suit.id === this.cache[cLen - 2].suit.id) {
+            trialWon = true;
+            this.sound.playMatchChime();
+            this.dom.matchRing.classList.add('active');
+            this.showBanner('FINAL MATCH!', `${activeName} matches suit during trial & WINS!`);
+            this.inspect(`★ TRIAL MATCH! ${activeName} matched suit on Trial ${trial}! Instant Game Over.`);
+            this.log(`★ FINAL MATCH in trial! ${activeName} triumphs.`);
+
+            await this.sleep(1800);
+            this.dom.matchRing.classList.remove('active');
+            this.dom.banner.classList.remove('show');
+
+            if (activePlayer === 'DAMMY') this.dammyReserve.push(...this.cache);
+            else this.compReserve.push(...this.cache);
+            this.cache = [];
+
+            this.endGame(activePlayer);
+            return;
+          }
+        }
+
+        // Active player failed to match in 7 turns: FORFEIT!
+        if (!trialWon) {
+          const forfeitedCount = this.cache.length;
+          this.showBanner('FORFEIT!', `${activeName} failed to match. ${emptyName} is revived!`);
+          this.setStatus(`${activeName} forfeits cache to ${emptyName}!`, true);
+          this.inspect(`FORFEIT: ${activeName} failed to match in 7 turns. All ${forfeitedCount} cards given to ${emptyName}.`);
+          this.log(`${activeName} failed to match in 7 trials. Forfeiting cards to ${emptyName}.`);
+
+          await this.sleep(1800);
+          this.dom.banner.classList.remove('show');
+
+          if (emptyPlayer === 'DAMMY') {
+            this.dammyReserve.push(...this.cache);
+          } else {
+            this.compReserve.push(...this.cache);
+          }
+          this.cache = [];
+
+          this.renderTableCards();
+          this.updateHUD();
+
+          // Empty player revived and plays first
+          this.currentTurn = emptyPlayer;
+          this.updatePodTurnStyles();
+          this.updateHumanButtonState();
+          this.setStatus(`${emptyName} revived and plays first!`);
+          this.inspect(`${emptyName} revived with ${forfeitedCount} cards and takes the lead.`);
+
+          await this.sleep(1000);
+        }
+      }
+
+      /* --------------------------------------------------------------------------
+         8.9 GAME OVER & DIALOG POPUP
+         -------------------------------------------------------------------------- */
+      endGame(winner) {
+        this.isGameOver = true;
+        clearInterval(this.timerInterval);
+
+        const durationMinutes = Math.floor((Date.now() - this.startTime) / 60000);
+        const durationSeconds = Math.floor(((Date.now() - this.startTime) % 60000) / 1000);
+        const formattedTime = `${String(durationMinutes).padStart(2, '0')}:${String(durationSeconds).padStart(2, '0')}`;
+
+        this.sound.playGameOverVictory();
+
+        if (winner === 'DAMMY') {
+          this.dom.modalTitle.textContent = 'DAMMY WINS!';
+          this.dom.modalTitle.style.color = 'var(--accent-cyan)';
+          this.dom.modalDesc.textContent = 'Dammy successfully captured all 52 cards leaving Computer with nothing!';
+          this.inspect('GAME OVER: DAMMY captured all 52 cards. Victory!');
+        } else if (winner === 'COMP') {
+          this.dom.modalTitle.textContent = 'COMPUTER WINS!';
+          this.dom.modalTitle.style.color = 'var(--accent-crimson)';
+          this.dom.modalDesc.textContent = 'The Computer dominated the match and claimed every card in the deck!';
+          this.inspect('GAME OVER: COMPUTER captured all 52 cards. Victory!');
+        } else {
+          this.dom.modalTitle.textContent = 'DRAW MATCH';
+          this.dom.modalDesc.textContent = 'Both decks were simultaneously exhausted.';
+          this.inspect('GAME OVER: Draw match.');
+        }
+
+        this.dom.modalTime.textContent = formattedTime;
+        this.dom.modalTurns.textContent = this.turnCount;
+        this.dom.modalDammyMatches.textContent = this.dammyMatchCount;
+        this.dom.modalCompMatches.textContent = this.compMatchCount;
+
+        setTimeout(() => {
+          this.dom.modal.classList.add('open');
+        }, 800);
+      }
+
+      /* --------------------------------------------------------------------------
+         8.10 VISUAL RENDERING & HTML UPDATES
+         -------------------------------------------------------------------------- */
+      renderTableCards(animateCurrent = false) {
+        const cLen = this.cache.length;
+
+        // Render previous card
+        if (cLen > 1) {
+          const prev = this.cache[cLen - 2];
+          this.dom.prevCardSlot.className = `playing-card suit-${prev.suit.name}`;
+          this.dom.prevCardSlot.innerHTML = this.getCardHTML(prev);
+        } else {
+          this.dom.prevCardSlot.className = 'playing-card empty-placeholder';
+          this.dom.prevCardSlot.innerHTML = '<span class="empty-text">Empty</span>';
+        }
+
+        // Render current card
+        if (cLen > 0) {
+          const curr = this.cache[cLen - 1];
+          this.dom.currentCardSlot.className = `playing-card suit-${curr.suit.name} ${animateCurrent ? 'card-animated-drop' : ''}`;
+          this.dom.currentCardSlot.innerHTML = this.getCardHTML(curr);
+        } else {
+          this.dom.currentCardSlot.className = 'playing-card empty-placeholder';
+          this.dom.currentCardSlot.innerHTML = '<span class="empty-text">Empty</span>';
+        }
+
+        this.dom.potCount.textContent = cLen;
+      }
+
+      getCardHTML(card) {
+        return `
+          <div class="card-corner top">
+            <span class="card-rank">${card.rank}</span>
+            <span class="card-mini-suit">${card.suit.symbol}</span>
+          </div>
+          <div class="card-center-art">${card.suit.symbol}</div>
+          <div class="card-corner bottom">
+            <span class="card-rank">${card.rank}</span>
+            <span class="card-mini-suit">${card.suit.symbol}</span>
+          </div>
+        `;
+      }
+
+      updateHUD() {
+        const dHand = this.dammyHand.length;
+        const dRes = this.dammyReserve.length;
+        const dTotal = dHand + dRes;
+
+        const cHand = this.compHand.length;
+        const cRes = this.compReserve.length;
+        const cTotal = cHand + cRes;
+
+        this.dom.dammyHandCount.textContent = dHand;
+        this.dom.dammyReserveCount.textContent = dRes;
+        this.dom.dammyTotalCount.textContent = dTotal;
+
+        this.dom.compHandCount.textContent = cHand;
+        this.dom.compReserveCount.textContent = cRes;
+        this.dom.compTotalCount.textContent = cTotal;
+
+        // Lead indicator calculation (Translating QBASIC Status subroutine)
+        if (dTotal > cTotal) {
+          const diff = dTotal - cTotal;
+          this.dom.leadChip.className = 'lead-chip dammy-leading';
+          this.dom.leadChip.textContent = `DAMMY leads by ${diff}`;
+        } else if (cTotal > dTotal) {
+          const diff = cTotal - dTotal;
+          this.dom.leadChip.className = 'lead-chip comp-leading';
+          this.dom.leadChip.textContent = `COMP leads by ${diff}`;
+        } else {
+          this.dom.leadChip.className = 'lead-chip';
+          this.dom.leadChip.textContent = `Tied (${dTotal} - ${cTotal})`;
+        }
+      }
+
+      updatePodTurnStyles() {
+        if (this.currentTurn === 'DAMMY') {
+          this.dom.podDammy.classList.add('active-turn');
+          this.dom.podComp.classList.remove('active-turn');
+        } else {
+          this.dom.podComp.classList.add('active-turn');
+          this.dom.podDammy.classList.remove('active-turn');
+        }
+      }
+
+      updateHumanButtonState() {
+        const canPlay = (!this.isAutoMode && this.currentTurn === 'DAMMY' && !this.isProcessingStep && !this.isGameOver);
+        this.dom.humanPlayBtn.disabled = !canPlay;
+        this.dom.humanPlayBtn.textContent = canPlay ? 'PLAY CARD (SPACE)' : "WAITING FOR TURN...";
+      }
+
+      setStatus(msg, highlight = false) {
+        this.dom.statusPill.textContent = msg;
+        if (highlight) {
+          this.dom.statusPill.classList.add('highlight');
+          setTimeout(() => this.dom.statusPill.classList.remove('highlight'), 1200);
+        }
+      }
+
+      inspect(text) {
+        this.dom.inspectorText.textContent = text;
+      }
+
+      log(msg) {
+        this.dom.auditLog.textContent = msg;
+      }
+
+      showBanner(title, desc) {
+        this.dom.bannerTitle.textContent = title;
+        this.dom.bannerDesc.textContent = desc;
+        this.dom.banner.classList.add('show');
+      }
+
+      updateTimerDisplay() {
+        if (!this.startTime || this.isGameOver) return;
+        const diff = Math.floor((Date.now() - this.startTime) / 1000);
+        const mins = String(Math.floor(diff / 60)).padStart(2, '0');
+        const secs = String(diff % 60).padStart(2, '0');
+        this.dom.timer.textContent = `${mins}:${secs}`;
+      }
+    }
+
+    // Launch game on DOM load
+    window.addEventListener('DOMContentLoaded', () => {
+      window.gameInstance = new ElewonjewoGame();
+    });
+  </script>
+</body>
+</html>
